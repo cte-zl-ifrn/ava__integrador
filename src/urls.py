@@ -5,25 +5,22 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 
-admin.site.site_title = "Painel AVA :.: Administração"
+admin.site.site_title = "Middleware AVA :.: Administração"
 admin.site.site_header = admin.site.site_title
 
 urlpatterns = [
     path(
-        f"{settings.ROOT_URL_PATH}",
+        f"{settings.ROOT_URL_PATH}/",
         include(
             [
-                path("admin/login/", RedirectView.as_view(url="/login/")),
-                path("djrichtextfield/", include("djrichtextfield.urls")),
+                path("admin/login/", RedirectView.as_view(url="/api/login/")),
                 path("admin/", admin.site.urls),
-                path("", include("a4.urls")),
                 path("", include("health.urls")),
-                # path("", include("middleware.urls")),
-                path("", include("painel.urls")),
+                path("", include("security.urls")),
+                path("", include("middleware.urls")),
             ]
         ),
     ),
-    path("", include("middleware.urls")),
     path("", RedirectView.as_view(url=settings.ROOT_URL_PATH)),
 ]
 
@@ -40,4 +37,4 @@ else:
 if settings.DEBUG:
     import debug_toolbar
 
-    urlpatterns.append(path(f"{settings.ROOT_URL_PATH}__debug__/", include(debug_toolbar.urls)))
+    urlpatterns.append(path(f"{settings.ROOT_URL_PATH}/__debug__/", include(debug_toolbar.urls)))
