@@ -10,6 +10,8 @@ django-better-choices==1.17
 # REST
 django-ninja==1.0.1
 requests==2.31.0
+jsonschema==4.21.1
+
 
 # Session
 django-redis-sessions==0.6.2
