@@ -4,20 +4,9 @@ from django.db.models import CharField, DateTimeField, JSONField, BooleanField, 
 from django.db.models import Manager, Model, QuerySet, Q
 from django_better_choices import Choices
 from django.utils.html import format_html
-from simple_history.models import HistoricalRecords
-from safedelete.models import SafeDeleteModel
 
 
-class SyncError(Exception):
-    def __init__(self, message, code, campus=None, retorno=None, params=None):
-        super().__init__(message, code, params)
-        self.message = message
-        self.code = code
-        self.campus = campus
-        self.retorno = retorno
-
-
-class Ambiente(SafeDeleteModel):
+class Ambiente(Model):
     def _c(color: str):
         return f"""<span style='background: {color}; color: #fff; padding: 1px 5px; font-size: 95%; border-radius: 4px;'>{color}</span>"""
 
@@ -33,8 +22,6 @@ class Ambiente(SafeDeleteModel):
     url = CharField(_("URL"), max_length=255)
     token = CharField(_("token"), max_length=255)
     active = BooleanField(_("ativo?"), default=True)
-
-    history = HistoricalRecords()
 
     class Meta:
         verbose_name = _("ambiente")
@@ -58,14 +45,12 @@ class Ambiente(SafeDeleteModel):
         super().save(*args, **kwargs)
 
 
-class Campus(SafeDeleteModel):
+class Campus(Model):
     suap_id = CharField(_("ID do campus no SUAP"), max_length=255, unique=True)
     sigla = CharField(_("sigla do campus"), max_length=255, unique=True)
     descricao = CharField(_("descrição"), max_length=255)
     ambiente = ForeignKey(Ambiente, on_delete=PROTECT)
     active = BooleanField(_("ativo?"))
-
-    history = HistoricalRecords()
 
     class Meta:
         verbose_name = _("campus")
@@ -73,7 +58,15 @@ class Campus(SafeDeleteModel):
         ordering = ["sigla"]
 
     def __str__(self):
-        return f"{self.descricao} ({self.sigla})"
+        return self.sigla
+
+    @property
+    def sync_up_enrolments_url(self):
+        return f"{self.ambiente.url}/local/suap/api/?sync_up_enrolments"
+
+    @property
+    def credentials(self):
+        return {"Authentication": f"Token {self.ambiente.token}"}
 
 
 class SolicitacaoManager(Manager):
@@ -91,7 +84,7 @@ class Solicitacao(Model):
         PROCESSANDO = Choices.Value(_("Processando"), value="P")
 
     timestamp = DateTimeField(_("quando ocorreu"), auto_now_add=True)
-    campus = ForeignKey(Campus, on_delete=PROTECT)
+    campus = ForeignKey(Campus, on_delete=PROTECT, null=True, blank=True)
     status = CharField(_("status"), max_length=256, choices=Status, null=True, blank=True)
     status_code = CharField(_("status code"), max_length=256, null=True, blank=True)
     recebido = JSONField(_("JSON recebido"), null=True, blank=True)

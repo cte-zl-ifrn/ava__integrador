@@ -1,17 +1,19 @@
 import json
+import sentry_sdk
+import jsonschema
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.http import HttpRequest, JsonResponse
+from django.conf import settings
 from middleware.models import Solicitacao, Campus
 from django.shortcuts import get_object_or_404
-from middleware.models import SyncError
-from middleware.brokers import get_json_api
+from middleware.brokers import get_json_api, SyncError, MoodleBroker
 
 
 def exception_as_json(func):
     def inner(request: HttpRequest, *args, **kwargs):
         def __response_error(request: HttpRequest, error: Exception):
-            event_id = capture_exception(error)
+            event_id = sentry_sdk.capture_exception(error)
             error_json = {
                 "error": getattr(error, "message", None),
                 "code": getattr(error, "code", 500),
@@ -78,12 +80,13 @@ def sync_up_enrolments(request: HttpRequest):
         return SyncError(f"Erro ao decodificar o body em utf-8 ({e1}).", 405)
 
     try:
-        json.dumps(message_string)
+        with open("middleware/static/diario.schema.json") as f:
+            message = json.dumps(message_string)
+            schema = json.load(f.read())
+            jsonschema.validate(instance=message, schema=schema)
+        return JsonResponse(MoodleBroker().sync(message).respondido, safe=False)
     except Exception as e1:
         return SyncError(f"Erro ao converter para JSON ({e1}).", 407)
-
-    response = Solicitacao.objects.sync(message_string)
-    return JsonResponse(response, safe=False)
 
 
 @csrf_exempt

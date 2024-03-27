@@ -1,20 +1,14 @@
 import logging
-import concurrent
+import requests
 import re
 import json
-import urllib.parse
 import sentry_sdk
-from typing import Dict, List, Union, Any
-from django.shortcuts import get_object_or_404
-from django.urls import reverse
-from django.conf import settings
-import requests
 from http.client import HTTPException
-from .models import Ambiente
-from middleware.models import Solicitacao
+from middleware.models import Ambiente
+from middleware.models import Solicitacao, Campus
 
 
-CODIGO_DIARIO_REGEX = re.compile("^(\d\d\d\d\d)\.(\d*)\.(\d*)\.(.*)\.(\w*\.\d*)(#\d*)?$")
+CODIGO_DIARIO_REGEX = re.compile("^(\\d\\d\\d\\d\\d)\\.(\\d*)\\.(\\d*)\\.(.*)\\.(\\w*\\.\\d*)(#\\d*)?$")
 CODIGO_DIARIO_ANTIGO_ELEMENTS_COUNT = 5
 CODIGO_DIARIO_NOVO_ELEMENTS_COUNT = 6
 CODIGO_DIARIO_SEMESTRE_INDEX = 0
@@ -24,19 +18,24 @@ CODIGO_DIARIO_TURMA_INDEX = 3
 CODIGO_DIARIO_DISCIPLINA_INDEX = 4
 CODIGO_DIARIO_ID_DIARIO_INDEX = 5
 
-CODIGO_COORDENACAO_REGEX = re.compile("^(\w*)\.(\d*)(.*)*$")
+CODIGO_COORDENACAO_REGEX = re.compile("^(\\w*)\\.(\\d*)(.*)*$")
 CODIGO_COORDENACAO_ELEMENTS_COUNT = 3
 CODIGO_COORDENACAO_CAMPUS_INDEX = 0
 CODIGO_COORDENACAO_CURSO_INDEX = 1
 CODIGO_COORDENACAO_SUFIXO_INDEX = 2
 
-CODIGO_PRATICA_REGEX = re.compile("^(\d\d\d\d\d)\.(\d*)\.(\d*)\.(.*)\.(\d{11,14}\d*)$")
+CODIGO_PRATICA_REGEX = re.compile("^(\\d\\d\\d\\d\\d)\\.(\\d*)\\.(\\d*)\\.(.*)\\.(\\d{11,14}\\d*)$")
 CODIGO_PRATICA_ELEMENTS_COUNT = 5
 CODIGO_PRATICA_SUFIXO_INDEX = 4
 
-CURSOS_CACHE = {}
 
-CHANGE_URL = re.compile("/course/view.php\?")
+class SyncError(Exception):
+    def __init__(self, message, code, campus=None, retorno=None, params=None):
+        super().__init__(message, code, params)
+        self.message = message
+        self.code = code
+        self.campus = campus
+        self.retorno = retorno
 
 
 def requests_get(url, headers={}, encoding="utf-8", decode=True, **kwargs):
@@ -71,3 +70,82 @@ def get_json_api(ava: Ambiente, service: str, **params: dict):
     except Exception as e:
         logging.error(e)
         sentry_sdk.capture_exception(e)
+
+
+class MoodleBroker:
+
+    def _validate_campus(self, pkg: dict):
+        try:
+            filter = {
+                "suap_id": pkg["campus"]["id"],
+                "sigla": pkg["campus"]["sigla"],
+                "active": True,
+            }
+        except Exception:
+            raise SyncError("O JSON não tinha a estrutura definida.", 406)
+
+        campus = Campus.objects.filter(**filter).first()
+        if campus is None:
+            raise SyncError(
+                f"""Não existe um campus com o id '{filter['suap_id']}' e a sigla '{filter['sigla']}'.""", 404
+            )
+
+        if not campus.active:
+            raise SyncError(f"O campus '{filter['sigla']}' existe, mas está inativo.", 412)
+
+        if not campus.ambiente.active:
+            raise SyncError(
+                f"""O campus '{filter['sigla']}' existe e está ativo, mas o ambiente {campus.ambiente.nome} está inativo.""",  # noqa
+                417,
+            )
+        return campus
+
+    def sync(self, recebido: dict):
+        retorno = None
+        solicitacao = None
+        erro_ao_obter_coortes = True
+        try:
+            solicitacao = Solicitacao.objects.create(recebido=recebido, status=Solicitacao.Status.PROCESSANDO)
+
+            solicitacao.campus = self._validate_campus(recebido)
+            try:
+                coortes = PainelBroker().get_coortes(recebido["curso"]["codigo"])
+                erro_ao_obter_coortes = False
+            except:
+                coortes = []
+            solicitacao.enviado = dict(**recebido, **{"coortes": coortes})
+            solicitacao.save()
+
+            retorno = requests.post(
+                solicitacao.campus.sync_up_enrolments_url,
+                json=solicitacao.enviado,
+                headers=solicitacao.campus.credentials,
+            )
+
+            solicitacao.respondido = json.loads(retorno.text)
+            solicitacao.respondido["erro_ao_obter_coortes"] = erro_ao_obter_coortes
+            solicitacao.status = Solicitacao.Status.SUCESSO
+            solicitacao.status_code = retorno.status_code
+            solicitacao.save()
+
+            return solicitacao
+        except Exception as e:
+            error_message = getattr(retorno, "text", "-")
+            error_text = f"""
+                Erro na integração. O AVA retornou um erro.
+                Contacte um administrador.
+                Erro: {e}.
+                Cause: {error_message}
+            """
+            if solicitacao is not None:
+                solicitacao.respondido = {"error": {"error_message": f"{e}", "error": f"{error_message}"}}
+                solicitacao.respondido["erro_ao_obter_coortes"] = erro_ao_obter_coortes
+                solicitacao.status = Solicitacao.Status.FALHA
+                solicitacao.status_code = getattr(e, "code", getattr(retorno, "status_code", 500))
+                solicitacao.save()
+            raise SyncError(error_text, getattr(e, "code", getattr(retorno, "status_code", 500)))
+
+
+class PainelBroker:
+    def get_coortes(self, curso_codigo: str):
+        return get_json(f"http://painel/painel/api/v1/coortes/{curso_codigo}/")

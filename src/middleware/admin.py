@@ -1,9 +1,9 @@
 from django.utils.translation import gettext as _
-import json
 from functools import update_wrapper
 from django.utils.safestring import mark_safe
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from django.urls import reverse
 from django.utils.html import format_html
 from django.db import transaction
 from django.urls import path, reverse
@@ -15,7 +15,6 @@ from django_json_widget.widgets import JSONEditorWidget
 from import_export.resources import ModelResource
 from import_export.fields import Field
 from import_export.widgets import ForeignKeyWidget, DateTimeWidget
-from .models import Ambiente, Campus, Solicitacao
 from django.contrib.admin.views.main import ChangeList
 from django.contrib.admin.utils import quote, unquote
 from django.contrib.admin.options import IS_POPUP_VAR, TO_FIELD_VAR, flatten_fieldsets
@@ -23,8 +22,12 @@ from django.contrib.admin.helpers import AdminErrorList, AdminForm, InlineAdminF
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
 from django.core.exceptions import PermissionDenied
 from import_export.admin import ImportExportMixin, ExportActionMixin
-from simple_history.admin import SimpleHistoryAdmin
-from safedelete.admin import SafeDeleteAdmin, SafeDeleteAdminFilter
+from middleware.models import Ambiente, Campus, Solicitacao
+from middleware.brokers import MoodleBroker
+
+
+DEFAULT_DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
+DEFAULT_DATETIME_FORMAT_WIDGET = DateTimeWidget(format=DEFAULT_DATETIME_FORMAT)
 
 
 class BaseChangeList(ChangeList):
@@ -35,12 +38,10 @@ class BaseChangeList(ChangeList):
             args=(quote(pk),),
             current_app=self.model_admin.admin_site.name,
         )
-        pk = getattr(result, self.pk_attname)
-        return f"/foos/foo/{pk}/"
 
 
-class BaseModelAdmin(ImportExportMixin, ExportActionMixin, SafeDeleteAdmin, SimpleHistoryAdmin):
-    list_filter = [SafeDeleteAdminFilter] + list(SafeDeleteAdmin.list_filter)
+class BaseModelAdmin(ImportExportMixin, ExportActionMixin, ModelAdmin):
+    list_filter = []
 
     def get_changelist(self, request, **kwargs):
         return BaseChangeList
@@ -58,7 +59,6 @@ class BaseModelAdmin(ImportExportMixin, ExportActionMixin, SafeDeleteAdmin, Simp
         urls.append(path("<path:object_id>/", wrap(self.preview_view), name=f"{prefix}_view"))
         return urls
 
-    # @csrf_protect_m
     def preview_view(self, request, object_id, form_url="", extra_context=None):
         to_field = request.POST.get(TO_FIELD_VAR, request.GET.get(TO_FIELD_VAR))
         if to_field and not self.to_field_allowed(request, to_field):
@@ -148,10 +148,6 @@ class BaseModelAdmin(ImportExportMixin, ExportActionMixin, SafeDeleteAdmin, Simp
         return inline_admin_formsets
 
 
-DEFAULT_DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
-DEFAULT_DATETIME_FORMAT_WIDGET = DateTimeWidget(format=DEFAULT_DATETIME_FORMAT)
-
-
 @register(Ambiente)
 class AmbienteAdmin(BaseModelAdmin):
     class CampusInline(StackedInline):
@@ -208,11 +204,11 @@ class CampusAdmin(BaseModelAdmin):
 
 
 @register(Solicitacao)
-class SolicitacaoAdmin(ModelAdmin):
-    list_display = ("quando", "status_merged", "codigo_diario", "acoes", "professores")
-    list_filter = ("status", "status_code")
+class SolicitacaoAdmin(BaseModelAdmin):
+    list_display = ("quando", "status_merged", "campus", "codigo_diario", "professores")
+    list_filter = ("status", "status_code", "campus__sigla")
     search_fields = ["recebido", "enviado", "respondido", "diario__codigo"]
-    # autocomplete_fields = ["campus"]
+    autocomplete_fields = ["campus"]
     date_hierarchy = "timestamp"
     ordering = ("-timestamp",)
 
@@ -236,10 +232,6 @@ class SolicitacaoAdmin(ModelAdmin):
             f"""<a class="export_link" href="{reverse("admin:middleware_solicitacao_sync", args=[obj.id])}">Reenviar</a>"""
         )
 
-    @display(description="Campus", ordering="campus__sigla")
-    def campus_sigla(self, obj):
-        return obj.campus.sigla if obj.campus else "-"
-
     @display(description="Quando", ordering="timestamp")
     def quando(self, obj):
         return obj.timestamp.strftime("%Y-%m-%d %H:%M:%S")
@@ -247,23 +239,24 @@ class SolicitacaoAdmin(ModelAdmin):
     @display(description="Professores", ordering="timestamp")
     def professores(self, obj):
         try:
-            recebido = json.loads(obj.recebido)
-            return format_html("<ul>" + "".join([f"<li>{x['nome']}</li>" for x in recebido["professores"]]) + "</ul>")
+            return format_html(
+                "<ul>" + "".join([f"<li>{x['nome']}</li>" for x in obj.recebido["professores"]]) + "</ul>"
+            )
         except Exception:
             return "-"
 
     @display(description="Diário", ordering="timestamp")
     def codigo_diario(self, obj):
         try:
-            recebido = json.loads(obj.recebido)
-            codigo = f"{recebido['turma']['codigo']}.{recebido['diario']['sigla']}#{recebido['diario']['id']}"
+            codigo = (
+                f"{obj.recebido['turma']['codigo']}.{obj.recebido['diario']['sigla']}#{obj.recebido['diario']['id']}"
+            )
             try:
-                respondido = json.loads(obj.respondido.replace("'", '"'))
                 suap_url = "https://suap.ifrn.edu.br"
                 return format_html(
-                    f"""<a href='{respondido['url']}'>{codigo}</a><br>
-                        <a href='{respondido['url_sala_coordenacao']}'>Coordenação</a><br>
-                        <a href='{suap_url}/edu/meu_diario/{recebido['diario']['id']}/1/'>SUAP</a>"""
+                    f"""<ul><li><a href='{obj.respondido['url']}'>{codigo}</a></li>
+                        <li><a href='{obj.respondido['url_sala_coordenacao']}'>Sala de coordenação</a></li>
+                        <li><a href='{suap_url}/edu/meu_diario/{obj.recebido['diario']['id']}/1/'>Diário no SUAP</a></li></ul>"""
                 )
             except Exception:
                 return codigo
@@ -285,9 +278,11 @@ class SolicitacaoAdmin(ModelAdmin):
 
     @transaction.atomic
     def sync_moodle_view(self, request, object_id, form_url="", extra_context=None):
-        return None
-        # s = get_object_or_404(Solicitacao, pk=object_id)
-        # try:
-        #     return HttpResponse(Diario.objects.sync(s.recebido))
-        # except Exception as e:
-        #     return HttpResponse(f"{e}")
+        s = get_object_or_404(Solicitacao, pk=object_id)
+        try:
+            solicitacao = MoodleBroker().sync(s.recebido)
+            if solicitacao is None:
+                raise Exception("Erro desconhecido.")
+            return HttpResponseRedirect(reverse("admin:middleware_solicitacao_view", args=[solicitacao.id]))
+        except Exception as e:
+            return HttpResponse(f"{e}")
