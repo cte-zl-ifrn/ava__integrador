@@ -10,7 +10,7 @@ DATABASES = {
         "NAME": env("POSTGRES_DATABASE", "postgres"),
         "USER": env("POSTGRES_USER", "postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", "postgres"),
-        "OPTIONS": {"options": env("POSTGRES_OPTIONS", "-c search_path=middleware")},
+        "OPTIONS": {"options": env("POSTGRES_OPTIONS", "-c search_path=postgres")},
     },
 }
 
