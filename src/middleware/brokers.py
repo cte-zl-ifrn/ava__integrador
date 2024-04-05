@@ -5,7 +5,7 @@ import json
 import sentry_sdk
 from http.client import HTTPException
 from middleware.models import Ambiente
-from middleware.models import Solicitacao, Campus
+from middleware.models import Solicitacao, Campus, Curso
 
 
 CODIGO_DIARIO_REGEX = re.compile("^(\\d\\d\\d\\d\\d)\\.(\\d*)\\.(\\d*)\\.(.*)\\.(\\w*\\.\\d*)(#\\d*)?$")
@@ -103,14 +103,12 @@ class MoodleBroker:
     def sync(self, recebido: dict):
         retorno = None
         solicitacao = None
-        erro_ao_obter_coortes = True
         try:
             solicitacao = Solicitacao.objects.create(recebido=recebido, status=Solicitacao.Status.PROCESSANDO)
 
             solicitacao.campus = self._validate_campus(recebido)
             try:
-                coortes = PainelBroker().get_coortes(recebido["curso"]["codigo"])
-                erro_ao_obter_coortes = False
+                coortes = Curso.objects.get(codigo=recebido["curso"]["codigo"]).coortes
             except:
                 coortes = []
             solicitacao.enviado = dict(**recebido, **{"coortes": coortes})
@@ -123,7 +121,6 @@ class MoodleBroker:
             )
 
             solicitacao.respondido = json.loads(retorno.text)
-            solicitacao.respondido["erro_ao_obter_coortes"] = erro_ao_obter_coortes
             solicitacao.status = Solicitacao.Status.SUCESSO
             solicitacao.status_code = retorno.status_code
             solicitacao.save()
@@ -139,7 +136,6 @@ class MoodleBroker:
             """
             if solicitacao is not None:
                 solicitacao.respondido = {"error": {"error_message": f"{e}", "error": f"{error_message}"}}
-                solicitacao.respondido["erro_ao_obter_coortes"] = erro_ao_obter_coortes
                 solicitacao.status = Solicitacao.Status.FALHA
                 solicitacao.status_code = getattr(e, "code", getattr(retorno, "status_code", 500))
                 solicitacao.save()

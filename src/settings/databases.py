@@ -7,10 +7,10 @@ DATABASES = {
         "ENGINE": env("POSTGRES_ENGINE", "django.db.backends.postgresql"),
         "HOST": env("POSTGRES_HOST", "db"),
         "PORT": env("POSTGRES_PORT", "5432"),
-        "NAME": env("POSTGRES_DATABASE", "postgres"),
+        "NAME": env("POSTGRES_DATABASE", "middleware"),
         "USER": env("POSTGRES_USER", "postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", "postgres"),
-        "OPTIONS": {"options": env("POSTGRES_OPTIONS", "-c search_path=middleware")},
+        "OPTIONS": {"options": env("POSTGRES_OPTIONS", "")},
     },
 }
 
