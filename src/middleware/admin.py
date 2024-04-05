@@ -7,8 +7,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.db import transaction
 from django.urls import path, reverse
-from django.contrib.admin import register, display, StackedInline
-from django.db.models import JSONField
+from django.contrib.admin import register, display, StackedInline, TabularInline
+from django.db.models import JSONField, Model
 from django.forms import ModelForm
 from django.contrib.admin import ModelAdmin
 from django_json_widget.widgets import JSONEditorWidget
@@ -22,12 +22,28 @@ from django.contrib.admin.helpers import AdminErrorList, AdminForm, InlineAdminF
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
 from django.core.exceptions import PermissionDenied
 from import_export.admin import ImportExportMixin, ExportActionMixin
-from middleware.models import Ambiente, Campus, Solicitacao
+from middleware.models import Ambiente, Campus, Solicitacao, Papel, Curso, Polo, CursoPolo, VinculoCurso, VinculoPolo
+from middleware.resources import (
+    AmbienteResource,
+    CampusResource,
+    PapelResource,
+    CursoResource,
+    CursoVinculoResource,
+    PoloResource,
+    PoloCursoResource,
+    PoloVinculoResource,
+)
+
 from middleware.brokers import MoodleBroker
 
 
 DEFAULT_DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
 DEFAULT_DATETIME_FORMAT_WIDGET = DateTimeWidget(format=DEFAULT_DATETIME_FORMAT)
+
+
+####
+# Base classes
+####
 
 
 class BaseChangeList(ChangeList):
@@ -146,6 +162,36 @@ class BaseModelAdmin(ImportExportMixin, ExportActionMixin, ModelAdmin):
             )
             inline_admin_formsets.append(inline_admin_formset)
         return inline_admin_formsets
+
+
+####
+# Inlines
+####
+
+
+class CampusInline(StackedInline):
+    model: Model = Campus
+    extra: int = 0
+
+
+class VinculoCursoInline(TabularInline):
+    model: Model = VinculoCurso
+    extra: int = 0
+
+
+class VinculoPoloInline(TabularInline):
+    model: Model = VinculoPolo
+    extra: int = 0
+
+
+class CursoPoloInline(TabularInline):
+    model: Model = CursoPolo
+    extra: int = 0
+
+
+####
+# Admins
+####
 
 
 @register(Ambiente)
