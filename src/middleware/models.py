@@ -2,6 +2,7 @@ from django.utils.translation import gettext as _
 from django.utils.safestring import mark_safe
 from django.db.models import CharField, DateTimeField, JSONField, BooleanField, ForeignKey, PROTECT
 from django.db.models import Manager, Model, QuerySet, Q
+from django.contrib.auth.models import User
 from django_better_choices import Choices
 from simple_history.models import HistoricalRecords
 from django.utils.html import format_html
@@ -11,6 +12,11 @@ class ActiveMixin:
     @property
     def active_icon(self):
         return "✅" if self.active else "⛔"
+
+
+class Contexto(Choices):
+    CURSO = Choices.Value(_("Curso"), value="c")
+    POLO = Choices.Value(_("Pólo"), value="p")
 
 
 class Ambiente(Model):
@@ -162,12 +168,7 @@ class VinculoCurso(ActiveMixin, Model):
     campus = ForeignKey(Campus, on_delete=PROTECT)
     curso = ForeignKey(Curso, on_delete=PROTECT)
     papel = ForeignKey(Papel, on_delete=PROTECT, limit_choices_to={"contexto": Contexto.CURSO})
-    colaborador = ForeignKey(
-        Usuario,
-        on_delete=PROTECT,
-        related_name="vinculos_cursos",
-        limit_choices_to={"tipo_usuario__in": TipoUsuario.COLABORADORES_KEYS},
-    )
+    colaborador = ForeignKey(User, on_delete=PROTECT, related_name="vinculos_cursos")
     active = BooleanField(_("ativo?"))
     history = HistoricalRecords()
 
@@ -214,12 +215,7 @@ class CursoPolo(ActiveMixin, Model):
 class VinculoPolo(ActiveMixin, Model):
     papel = ForeignKey(Papel, on_delete=PROTECT, limit_choices_to={"contexto": Contexto.POLO})
     polo = ForeignKey(Polo, on_delete=PROTECT)
-    colaborador = ForeignKey(
-        Usuario,
-        on_delete=PROTECT,
-        related_name="vinculos_polos",
-        limit_choices_to={"tipo_usuario__in": TipoUsuario.COLABORADORES_KEYS},
-    )
+    colaborador = ForeignKey(User, on_delete=PROTECT, related_name="vinculos_polos")
     active = BooleanField(_("ativo?"))
     history = HistoricalRecords()
 
