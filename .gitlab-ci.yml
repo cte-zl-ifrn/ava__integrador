@@ -15,12 +15,13 @@
 # https://docs.gitlab.com/ee/development/cicd/templates.html
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
-default:
-    image: docker:24.0.5
-    services:
-        - docker:24.0.5-dind
-    before_script:
-        - docker info
+
+# default:
+#     image: docker:24.0.5
+#     services:
+#         - docker:24.0.5-dind
+#     before_script:
+#         - docker info
 
 stages: # List of stages for jobs, and their order of execution
     - build
@@ -34,7 +35,7 @@ build-job: # This job runs in the build stage, which runs first.
         - dev
     script:
         - echo "Building the code..."
-        - docker build -t ctezlifrn/avaintegrador .
+        - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
         - echo "Build complete."
 
 unit-test-job: # This job runs in the test stage.
