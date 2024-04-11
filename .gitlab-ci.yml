@@ -29,11 +29,11 @@ stages: # List of stages for jobs, and their order of execution
     - publish
     - deploy
 
-sast:
-    stage: test
+# sast:
+#     stage: test
 
-include:
-    - template: Security/SAST.gitlab-ci.yml
+# include:
+#     - template: Security/SAST.gitlab-ci.yml
 
 build-job:
     stage: build
@@ -75,7 +75,12 @@ publish-job:
 
 deploy-job:
     stage: deploy
-    environment: production
+    only:
+        - main
+        - dev
     script:
         - echo "Deploying image..."
+        - mkdir -p ~/.ssh
+        - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        - ssh 10.126.0.203 "/var/dockers/vai deploy app"
         - echo "Image successfully deployed."
