@@ -31,6 +31,7 @@ stages: # List of stages for jobs, and their order of execution
 
 build-job:
     stage: build
+    image: docker:latest
     only:
         - main
         - dev
