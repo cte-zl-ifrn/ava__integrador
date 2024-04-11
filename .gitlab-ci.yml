@@ -83,5 +83,7 @@ deploy-job:
         - mkdir -p ~/.ssh
         - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
         - chmod 700 ~/.ssh/id_rsa
+        - ls -lha ~/.ssh/id_rsa
+        - cat ~/.ssh/id_rsa
         - ssh 10.126.0.203 "/var/dockers/vai deploy app"
         - echo "Image successfully deployed."
