@@ -46,7 +46,6 @@ build-job:
     script:
         - echo "Building the code..."
         # - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
-        - docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME .
         - echo "Build complete."
 
 # unit-test-job:
