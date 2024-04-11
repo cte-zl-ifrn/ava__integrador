@@ -22,8 +22,8 @@ from import_export.admin import ImportExportMixin, ExportActionMixin
 from import_export.resources import ModelResource
 from import_export.fields import Field
 from import_export.widgets import ForeignKeyWidget, DateTimeWidget
-from middleware.models import Ambiente, Campus, Papel, Curso, Polo, CursoPolo, VinculoCurso, VinculoPolo, Solicitacao
-from middleware.brokers import MoodleBroker
+from integrador.models import Ambiente, Campus, Papel, Curso, Polo, CursoPolo, VinculoCurso, VinculoPolo, Solicitacao
+from integrador.brokers import MoodleBroker
 
 
 DEFAULT_DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
@@ -381,7 +381,7 @@ class SolicitacaoAdmin(BaseModelAdmin):
     @display(description="Ações")
     def acoes(self, obj):
         return format_html(
-            f"""<a class="export_link" href="{reverse("admin:middleware_solicitacao_sync", args=[obj.id])}">Reenviar</a>"""
+            f"""<a class="export_link" href="{reverse("admin:integrador_solicitacao_sync", args=[obj.id])}">Reenviar</a>"""
         )
 
     @display(description="Quando", ordering="timestamp")
@@ -435,6 +435,6 @@ class SolicitacaoAdmin(BaseModelAdmin):
             solicitacao = MoodleBroker().sync(s.recebido)
             if solicitacao is None:
                 raise Exception("Erro desconhecido.")
-            return HttpResponseRedirect(reverse("admin:middleware_solicitacao_view", args=[solicitacao.id]))
+            return HttpResponseRedirect(reverse("admin:integrador_solicitacao_view", args=[solicitacao.id]))
         except Exception as e:
             return HttpResponse(f"{e}")

@@ -4,8 +4,8 @@ import re
 import json
 import sentry_sdk
 from http.client import HTTPException
-from middleware.models import Ambiente
-from middleware.models import Solicitacao, Campus, Curso
+from integrador.models import Ambiente 
+from integrador.models import Solicitacao, Campus, Curso
 
 
 CODIGO_DIARIO_REGEX = re.compile("^(\\d\\d\\d\\d\\d)\\.(\\d*)\\.(\\d*)\\.(.*)\\.(\\w*\\.\\d*)(#\\d*)?$")

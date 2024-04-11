@@ -13,7 +13,7 @@ AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)
 AUTH_PASSWORD_VALIDATORS = []
 
 OAUTH = {
-    "REDIRECT_URI": env("OAUTH_REDIRECT_URI", "http://middleware/api/authenticate/"),
+    "REDIRECT_URI": env("OAUTH_REDIRECT_URI", "http://integrador/api/authenticate/"),
     "CLIENT_ID": env("OAUTH_CLIENT_ID", "changeme"),
     "CLIENT_SECRET": env("OAUTH_CLIENT_SECRET", "changeme"),
     "BASE_URL": env("OAUTH_BASE_URL", "http://login"),
