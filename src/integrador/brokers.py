@@ -4,7 +4,7 @@ import re
 import json
 import sentry_sdk
 from http.client import HTTPException
-from integrador.models import Ambiente 
+from integrador.models import Ambiente
 from integrador.models import Solicitacao, Campus, Curso
 
 
@@ -140,8 +140,3 @@ class MoodleBroker:
                 solicitacao.status_code = getattr(e, "code", getattr(retorno, "status_code", 500))
                 solicitacao.save()
             raise SyncError(error_text, getattr(e, "code", getattr(retorno, "status_code", 500)))
-
-
-class PainelBroker:
-    def get_coortes(self, curso_codigo: str):
-        return get_json(f"http://painel/painel/api/v1/coortes/{curso_codigo}/")
