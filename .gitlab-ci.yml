@@ -1,87 +1,65 @@
-# This file is a template, and might need editing before it works on your project.
-# This is a sample GitLab CI/CD configuration file that should run without any modifications.
-# It demonstrates a basic 3 stage CI/CD pipeline. Instead of real tests or scripts,
-# it uses echo commands to simulate the pipeline execution.
-#
-# A pipeline is composed of independent jobs that run scripts, grouped into stages.
-# Stages run in sequential order, but jobs within stages run in parallel.
-#
-# For more information, see: https://docs.gitlab.com/ee/ci/yaml/index.html#stages
-#
-# You can copy and paste this template into a new `.gitlab-ci.yml` file.
-# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
-#
-# To contribute improvements to CI/CD templates, please follow the Development guide at:
-# https://docs.gitlab.com/ee/development/cicd/templates.html
-# This specific template is located at:
-# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
-
-# default:
-#     image: docker:24.0.5
-#     services:
-#         - docker:24.0.5-dind
-#     before_script:
-#         - docker info
+default:
+    before_script:
+        - docker info
 
 stages: # List of stages for jobs, and their order of execution
     - build
     - test
     - publish
     - deploy
-
 # sast:
 #     stage: test
 
 # include:
 #     - template: Security/SAST.gitlab-ci.yml
 
-build-job:
-    stage: build
-    image: docker:latest
-    services:
-        - docker:dind
-    only:
-        - main
-        - dev
-    script:
-        - echo "Building the code..."
-        # - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
-        - echo "Build complete."
-
-# unit-test-job:
-#     stage: test
+# build-job:
+#     stage: build
+#     image: docker:latest
+#     services:
+#         - docker:dind
+#     only:
+#         - main
+#         - dev
 #     script:
-#         - echo "Running unit tests... This will take about 60 seconds."
-#         - sleep 60
-#         - echo "Code coverage is 90%"
+#         - echo "Building the code..."
+#         # - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
+#         - echo "Build complete."
 
-# lint-test-job:
-#     stage: test
+# # unit-test-job:
+# #     stage: test
+# #     script:
+# #         - echo "Running unit tests... This will take about 60 seconds."
+# #         - sleep 60
+# #         - echo "Code coverage is 90%"
+
+# # lint-test-job:
+# #     stage: test
+# #     script:
+# #         - echo "Linting code... This will take about 10 seconds."
+# #         - sleep 10
+# #         - echo "No lint issues found."
+
+# publish-job:
+#     stage: publish
+#     only:
+#         - main
+#         - dev
 #     script:
-#         - echo "Linting code... This will take about 10 seconds."
-#         - sleep 10
-#         - echo "No lint issues found."
+#         - echo "Deploying image..."
+#         - echo "docker login -u $DOCKERHUB_REGISTRY_USER -p $DOCKERHUB_REGISTRY_PASSWORD"
+#         - echo "docker push ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME"
+#         - echo "Image successfully deployed."
 
-publish-job:
-    stage: publish
-    only:
-        - main
-        - dev
-    script:
-        - echo "Deploying image..."
-        - echo "docker login -u $DOCKERHUB_REGISTRY_USER -p $DOCKERHUB_REGISTRY_PASSWORD"
-        - echo "docker push ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME"
-        - echo "Image successfully deployed."
-
-deploy-job:
-    stage: deploy
-    only:
-        - main
-        - dev
-    script:
-        - echo "Deploying image..."
-        - mkdir -p ~/.ssh
-        - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-        - chmod 700 ~/.ssh/id_rsa
-        - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
-        - echo "Image successfully deployed."
+# deploy-job:
+#     stage: deploy
+#     only:
+#         - main
+#         - dev
+#     script:
+#         - echo "Deploying image..."
+#         - mkdir -p ~/.ssh
+#         - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+#         - chmod 700 ~/.ssh/id_rsa
+#         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
+#         - echo "Image successfully deployed."
