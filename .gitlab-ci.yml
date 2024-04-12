@@ -24,6 +24,8 @@ build-job:
         - dev
     script:
         - echo "Building the code..."
+        - echo "\nAPP_VERSION = '$CI_COMMIT_SHORT_SHA:$CI_PIPELINE_ID'\n" >> src/settings/apps.py
+        - cat src/settings/apps.py
         - docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME .
         - echo "Build complete."
 # # unit-test-job:
@@ -40,26 +42,36 @@ build-job:
 # #         - sleep 10
 # #         - echo "No lint issues found."
 
-# publish-job:
-#     stage: publish
-#     only:
-#         - main
-#         - dev
-#     script:
-#         - echo "Deploying image..."
-#         - echo "docker login -u $DOCKERHUB_REGISTRY_USER -p $DOCKERHUB_REGISTRY_PASSWORD"
-#         - echo "docker push ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME"
-#         - echo "Image successfully deployed."
+publish-job:
+    stage: publish
+    only:
+        - main
+        - dev
+    script:
+        - echo "Deploying image..."
+        - docker login -u $DOCKERHUB_REGISTRY_USER -p $DOCKERHUB_REGISTRY_PASSWORD
+        - docker push ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME
+        - echo "Image successfully deployed."
 
-# deploy-job:
+deploy-teste-job:
+    stage: deploy
+    only:
+        - dev
+    script:
+        - echo "Deploying service in test..."
+        - mkdir -p ~/.ssh
+        - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+        - chmod 700 ~/.ssh/id_rsa
+        - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
+        - echo "Service successfully deployed in test."
+# deploy-producao-job:
 #     stage: deploy
 #     only:
 #         - main
-#         - dev
 #     script:
-#         - echo "Deploying image..."
+#         - echo "Deploying service in production..."
 #         - mkdir -p ~/.ssh
 #         - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
 #         - chmod 700 ~/.ssh/id_rsa
 #         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
-#         - echo "Image successfully deployed."
+#         - echo "Service successfully deployed in production."
