@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
-from settings import DATABASES, DEBUG
+from settings import DATABASES
 import psycopg
 import time
 import logging
@@ -39,9 +39,7 @@ if __name__ == "__main__":
                 import debugpy
 
                 debugpy.listen(("0.0.0.0", 5678))
-                # debugpy.wait_for_client()
             except Exception:
                 pass
-            # debugpy.breakpoint()
 
     execute_from_command_line(sys.argv)
