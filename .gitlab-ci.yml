@@ -59,15 +59,6 @@ deploy-teste-job:
         - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
         - chmod 700 ~/.ssh/id_rsa
         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
+        - sleep 60
+        - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai logs -n 1000"
         - echo "Service successfully deployed in test."
-# deploy-producao-job:
-#     stage: deploy
-#     only:
-#         - main
-#     script:
-#         - echo "Deploying service in production..."
-#         - mkdir -p ~/.ssh
-#         - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-#         - chmod 700 ~/.ssh/id_rsa
-#         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai deploy app"
-#         - echo "Service successfully deployed in production."
