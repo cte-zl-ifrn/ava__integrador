@@ -2,30 +2,30 @@ default:
     before_script:
         - docker info
 
-stages: # List of stages for jobs, and their order of execution
+stages:
     - build
     - test
     - publish
     - deploy
+
 # sast:
 #     stage: test
 
 # include:
 #     - template: Security/SAST.gitlab-ci.yml
 
-# build-job:
-#     stage: build
-#     image: docker:latest
-#     services:
-#         - docker:dind
-#     only:
-#         - main
-#         - dev
-#     script:
-#         - echo "Building the code..."
-#         # - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
-#         - echo "Build complete."
-
+build-job:
+    stage: build
+    image: docker:latest
+    services:
+        - docker:dind
+    only:
+        - main
+        - dev
+    script:
+        - echo "Building the code..."
+        # - echo "docker build -t ctezlifrn/avaintegrador:$CI_COMMIT_REF_NAME ."
+        - echo "Build complete."
 # # unit-test-job:
 # #     stage: test
 # #     script:
