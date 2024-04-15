@@ -40,6 +40,8 @@ build-job:
 
 sast:
     stage: test
+    variables:
+        CI_DEBUG_TRACE: "true"
     before_script:
         - echo "hello from before sast"
         - echo "this is in the file" > test.txt
