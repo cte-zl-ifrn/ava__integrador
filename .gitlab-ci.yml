@@ -1,9 +1,3 @@
-variables:
-    SAST_IMAGE_SUFFIX: "-fips"
-
-include:
-    - template: Security/SAST.gitlab-ci.yml
-
 stages:
     - build
     - test
@@ -40,15 +34,6 @@ build-job:
 
 sast:
     stage: test
-    variables:
-        CI_DEBUG_TRACE: "true"
-    before_script:
-        - echo "hello from before sast"
-        - echo "this is in the file" > test.txt
-    artifacts:
-        reports:
-            sast: gl-sast-report.json
-        paths: [gl-sast-report.json, test.txt]
 
 publish-job:
     stage: publish
@@ -74,3 +59,6 @@ deploy-teste-job:
         - sleep 60
         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai logs -n 1000"
         - echo "Service successfully deployed in test."
+
+include:
+    - template: Auto-DevOps.gitlab-ci.yml
