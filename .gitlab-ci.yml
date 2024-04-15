@@ -1,14 +1,14 @@
+variables:
+    SAST_IMAGE_SUFFIX: "-fips"
+
+include:
+    - template: Security/SAST.gitlab-ci.yml
+
 stages:
     - build
     - test
     - publish
     - deploy
-
-sast:
-    stage: test
-
-include:
-    - template: Security/SAST.gitlab-ci.yml
 
 build-job:
     stage: build
@@ -39,13 +39,14 @@ build-job:
 # #         - echo "No lint issues found."
 
 sast:
-  before_script:
-      - echo "hello from before sast"
-      - echo "this is in the file" > test.txt
-  artifacts:
-    reports:
-      sast: gl-sast-report.json
-    paths: [gl-sast-report.json, test.txt]
+    stage: test
+    before_script:
+        - echo "hello from before sast"
+        - echo "this is in the file" > test.txt
+    artifacts:
+        reports:
+            sast: gl-sast-report.json
+        paths: [gl-sast-report.json, test.txt]
 
 publish-job:
     stage: publish
