@@ -38,6 +38,15 @@ build-job:
 # #         - sleep 10
 # #         - echo "No lint issues found."
 
+sast:
+  before_script:
+      - echo "hello from before sast"
+      - echo "this is in the file" > test.txt
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+    paths: [gl-sast-report.json, test.txt]
+
 publish-job:
     stage: publish
     only:
