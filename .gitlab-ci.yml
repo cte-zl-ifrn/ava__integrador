@@ -32,9 +32,6 @@ build-job:
 # #         - sleep 10
 # #         - echo "No lint issues found."
 
-sast:
-    stage: test
-
 publish-job:
     stage: publish
     only:
@@ -59,6 +56,7 @@ deploy-teste-job:
         - sleep 60
         - ssh -o StrictHostKeyChecking=no root@10.126.0.203 "/var/dockers/vai logs -n 1000"
         - echo "Service successfully deployed in test."
-
+sast:
+    stage: test
 include:
     - template: Auto-DevOps.gitlab-ci.yml
